@@ -1,0 +1,51 @@
+{
+  "expo": {
+    "name": "SnapClone",
+    "slug": "snapclone",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourusername.snapclone"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.yourusername.snapclone",
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow SnapClone to access your camera to take photos and videos."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow SnapClone to use your location to show your friends on the map."
+        }
+      ]
+    ]
+  }
+} 
