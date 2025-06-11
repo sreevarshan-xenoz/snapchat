@@ -59,9 +59,7 @@
         {
           "icon": "./assets/notification-icon.png",
           "color": "#ffffff",
-          "sounds": [
-            "./assets/notification-sound.wav"
-          ],
+          "sounds": [],
           "androidMode": "default",
           "androidCollapsedTitle": "SnapClone",
           "iosDisplayInForeground": true

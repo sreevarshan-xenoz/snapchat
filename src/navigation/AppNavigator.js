@@ -1,8 +1,10 @@
 import React from 'react';
+import { View, Text } from 'react-native';
 import { useSelector } from 'react-redux';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { useNotification } from '../contexts/NotificationContext';
 
 // Auth Screens
 import LoginScreen from '../screens/auth/LoginScreen';
@@ -76,6 +78,8 @@ const ProfileNavigator = () => {
 };
 
 const MainNavigator = () => {
+  const { unreadCount } = useNotification();
+  
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -94,7 +98,28 @@ const MainNavigator = () => {
             iconName = focused ? 'person' : 'person-outline';
           }
 
-          return <Ionicons name={iconName} size={size} color={color} />;
+          return (
+            <View>
+              <Ionicons name={iconName} size={size} color={color} />
+              {route.name === 'Profile' && unreadCount > 0 && (
+                <View style={{
+                  position: 'absolute',
+                  right: -6,
+                  top: -3,
+                  backgroundColor: '#FF3B30',
+                  borderRadius: 9,
+                  width: 18,
+                  height: 18,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </View>
+          );
         },
         tabBarActiveTintColor: '#FFFC00',
         tabBarInactiveTintColor: 'gray',

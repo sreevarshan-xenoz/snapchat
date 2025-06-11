@@ -15,9 +15,10 @@ import { Camera } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { useSelector } from 'react-redux';
 import { getFirebaseDb, getFirebaseStorage } from '../../config/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import NotificationHelper from '../../utils/NotificationHelper';
 
 const CreateStoryScreen = ({ navigation, route }) => {
   const { user } = useSelector((state) => state.auth);
@@ -146,6 +147,22 @@ const CreateStoryScreen = ({ navigation, route }) => {
         ],
         views: [],
       });
+      
+      // Get user's friends to send notifications
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const friends = userData.friends || [];
+        
+        // Send notifications to friends
+        if (friends.length > 0) {
+          await NotificationHelper.sendStoryNotification(
+            user.uid,
+            friends,
+            storyDoc.id
+          );
+        }
+      }
       
       setUploading(false);
       Alert.alert('Success', 'Your story has been posted!');
