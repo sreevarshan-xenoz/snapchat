@@ -28,6 +28,9 @@ import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import FriendsScreen from '../screens/profile/FriendsScreen';
 import FriendRequestsScreen from '../screens/profile/FriendRequestsScreen';
 
+// Notifications Screen
+import NotificationsScreen from '../screens/notifications/NotificationsScreen';
+
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -63,10 +66,11 @@ const StoryNavigator = () => {
 const ProfileNavigator = () => {
   return (
     <Stack.Navigator>
-      <Stack.Screen name="Profile" component={ProfileScreen} />
-      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      <Stack.Screen name="MyProfile" component={ProfileScreen} options={{ title: 'Profile' }} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Edit Profile' }} />
       <Stack.Screen name="Friends" component={FriendsScreen} />
-      <Stack.Screen name="FriendRequests" component={FriendRequestsScreen} />
+      <Stack.Screen name="FriendRequests" component={FriendRequestsScreen} options={{ title: 'Friend Requests' }} />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} />
     </Stack.Navigator>
   );
 };
