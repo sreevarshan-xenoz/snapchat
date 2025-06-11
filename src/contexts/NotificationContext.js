@@ -11,7 +11,8 @@ import {
   arrayUnion, 
   Timestamp, 
   orderBy, 
-  limit 
+  limit,
+  addDoc 
 } from 'firebase/firestore';
 import NotificationService from '../services/NotificationService';
 
