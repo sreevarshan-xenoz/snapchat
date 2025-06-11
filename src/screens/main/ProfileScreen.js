@@ -16,11 +16,13 @@ import { getFirebaseStorage, getFirebaseDb } from '../../config/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { updateUserProfile } from '../../redux/slices/userSlice';
+import { useNotification } from '../../contexts/NotificationContext';
 
 const ProfileScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const { profile } = useSelector((state) => state.user);
+  const { unreadCount } = useNotification();
   
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({
@@ -179,6 +181,21 @@ const ProfileScreen = ({ navigation }) => {
           <Ionicons name="person-add-outline" size={24} color="#FFFC00" />
           <Text style={styles.actionText}>Friend Requests</Text>
         </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('Notifications')}
+        >
+          <Ionicons name="notifications-outline" size={24} color="#FFFC00" />
+          <Text style={styles.actionText}>Notifications</Text>
+          {unreadCount > 0 && (
+            <View style={styles.badgeContainer}>
+              <Text style={styles.badgeText}>
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
       
       <TouchableOpacity 
@@ -275,6 +292,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     marginLeft: 15,
+    flex: 1,
   },
   logoutButton: {
     flexDirection: 'row',
@@ -291,6 +309,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 10,
+  },
+  badgeContainer: {
+    backgroundColor: '#FF3B30',
+    borderRadius: 12,
+    minWidth: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 5,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });
 
