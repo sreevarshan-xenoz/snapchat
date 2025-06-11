@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getFirebaseDb } from '../config/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
+import { getNotificationIcon, supportsNotificationIcon } from '../utils/NotificationIconGenerator';
 
 // Configure notifications
 Notifications.setNotificationHandler({
@@ -79,14 +80,21 @@ export default class NotificationService {
 
   static async scheduleLocalNotification(title, body, data = {}) {
     try {
+      const notificationContent = {
+        title,
+        body,
+        data,
+        sound: true,
+        badge: 1,
+      };
+      
+      // Add icon for Android if supported
+      if (Platform.OS === 'android' && supportsNotificationIcon()) {
+        notificationContent.icon = getNotificationIcon();
+      }
+      
       await Notifications.scheduleNotificationAsync({
-        content: {
-          title,
-          body,
-          data,
-          sound: true,
-          badge: 1,
-        },
+        content: notificationContent,
         trigger: null, // Immediate notification
       });
     } catch (error) {
