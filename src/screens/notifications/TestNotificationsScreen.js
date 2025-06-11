@@ -23,7 +23,7 @@ const TestNotificationsScreen = () => {
       const notificationId = await NotificationTester.sendTestNotification();
       setLastNotificationId(notificationId);
       setLoading(false);
-      Alert.alert('Success', `Test notification sent with ID: ${notificationId}`);
+      Alert.alert('Success', 'Test notification sent successfully');
     } catch (error) {
       console.error('Error sending test notification:', error);
       setLoading(false);
@@ -37,7 +37,7 @@ const TestNotificationsScreen = () => {
       const notificationId = await NotificationTester.sendTestMessageNotification();
       setLastNotificationId(notificationId);
       setLoading(false);
-      Alert.alert('Success', `Message notification sent with ID: ${notificationId}`);
+      Alert.alert('Success', 'Message notification sent successfully');
     } catch (error) {
       console.error('Error sending message notification:', error);
       setLoading(false);
@@ -51,7 +51,7 @@ const TestNotificationsScreen = () => {
       const notificationId = await NotificationTester.sendTestFriendRequestNotification();
       setLastNotificationId(notificationId);
       setLoading(false);
-      Alert.alert('Success', `Friend request notification sent with ID: ${notificationId}`);
+      Alert.alert('Success', 'Friend request notification sent successfully');
     } catch (error) {
       console.error('Error sending friend request notification:', error);
       setLoading(false);
@@ -65,7 +65,7 @@ const TestNotificationsScreen = () => {
       const notificationId = await NotificationTester.sendTestStoryNotification();
       setLastNotificationId(notificationId);
       setLoading(false);
-      Alert.alert('Success', `Story notification sent with ID: ${notificationId}`);
+      Alert.alert('Success', 'Story notification sent successfully');
     } catch (error) {
       console.error('Error sending story notification:', error);
       setLoading(false);
@@ -83,7 +83,7 @@ const TestNotificationsScreen = () => {
       setLoading(true);
       await NotificationTester.cancelNotification(lastNotificationId);
       setLoading(false);
-      Alert.alert('Success', `Notification with ID ${lastNotificationId} canceled`);
+      Alert.alert('Success', 'Notification canceled successfully');
       setLastNotificationId(null);
     } catch (error) {
       console.error('Error canceling notification:', error);
@@ -249,7 +249,7 @@ const TestNotificationsScreen = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-      
+
       {loading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#FFFC00" />
@@ -262,50 +262,46 @@ const TestNotificationsScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    justifyContent: 'space-between',
+    paddingHorizontal: 15,
     paddingTop: 50,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    paddingBottom: 10,
+    backgroundColor: '#000',
   },
   backButton: {
     padding: 5,
   },
   title: {
-    color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+    color: '#fff',
   },
   content: {
     padding: 20,
-    paddingBottom: 40,
   },
   sectionTitle: {
-    color: '#FFFC00',
     fontSize: 18,
     fontWeight: 'bold',
-    marginTop: 30,
     marginBottom: 15,
+    marginTop: 20,
   },
   button: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFC00',
-    borderRadius: 10,
+    borderRadius: 8,
     padding: 15,
-    marginBottom: 15,
+    marginBottom: 10,
   },
   buttonText: {
-    color: '#000',
-    fontWeight: 'bold',
-    fontSize: 16,
     marginLeft: 10,
+    fontSize: 16,
+    fontWeight: '500',
   },
   badgeButtons: {
     flexDirection: 'row',
@@ -313,21 +309,20 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   badgeButton: {
-    backgroundColor: '#FFFC00',
     width: 60,
     height: 60,
     borderRadius: 30,
+    backgroundColor: '#FFFC00',
     justifyContent: 'center',
     alignItems: 'center',
   },
   badgeButtonText: {
-    color: '#000',
-    fontWeight: 'bold',
     fontSize: 18,
+    fontWeight: 'bold',
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
