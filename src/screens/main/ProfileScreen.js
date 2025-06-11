@@ -196,6 +196,14 @@ const ProfileScreen = ({ navigation }) => {
             </View>
           )}
         </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('TestNotifications')}
+        >
+          <Ionicons name="construct-outline" size={24} color="#FFFC00" />
+          <Text style={styles.actionText}>Test Notifications</Text>
+        </TouchableOpacity>
       </View>
       
       <TouchableOpacity 

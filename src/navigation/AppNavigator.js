@@ -32,6 +32,7 @@ import FriendRequestsScreen from '../screens/profile/FriendRequestsScreen';
 
 // Notifications Screen
 import NotificationsScreen from '../screens/notifications/NotificationsScreen';
+import TestNotificationsScreen from '../screens/notifications/TestNotificationsScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -73,6 +74,7 @@ const ProfileNavigator = () => {
       <Stack.Screen name="Friends" component={FriendsScreen} />
       <Stack.Screen name="FriendRequests" component={FriendRequestsScreen} options={{ title: 'Friend Requests' }} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
+      <Stack.Screen name="TestNotifications" component={TestNotificationsScreen} options={{ title: 'Test Notifications' }} />
     </Stack.Navigator>
   );
 };
