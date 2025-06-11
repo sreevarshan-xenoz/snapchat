@@ -57,20 +57,21 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/notification-icon.png",
-          "color": "#ffffff",
+          "icon": "./assets/notification-icon.svg",
+          "color": "#FFFC00",
           "sounds": [],
           "androidMode": "default",
-          "androidCollapsedTitle": "SnapClone",
+          "androidCollapsedTitle": "#{unread_notifications} new notifications",
           "iosDisplayInForeground": true
         }
       ]
     ],
     "notification": {
-      "icon": "./assets/notification-icon.png",
+      "icon": "./assets/notification-icon.svg",
       "color": "#FFFC00",
       "androidMode": "default",
-      "androidCollapsedTitle": "SnapClone"
+      "androidCollapsedTitle": "#{unread_notifications} new notifications",
+      "iosDisplayInForeground": true
     }
   }
 } 
