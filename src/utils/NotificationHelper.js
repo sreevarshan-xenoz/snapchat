@@ -1,135 +1,151 @@
-import { getFirebaseDb } from '../config/firebase';
-import { collection, addDoc, Timestamp, doc, getDoc } from 'firebase/firestore';
+/**
+ * NotificationHelper.js
+ * 
+ * A utility class to help send different types of notifications in the app.
+ * This centralizes notification creation logic and ensures consistent formatting.
+ */
 
-class NotificationHelper {
-  // Send a message notification
-  static async sendMessageNotification(senderId, recipientId, message, chatId) {
+import NotificationService from '../services/NotificationService';
+import { getFirebaseDb } from '../config/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+
+export default class NotificationHelper {
+  /**
+   * Send a message notification
+   * @param {string} senderId - The ID of the user sending the message
+   * @param {string} receiverId - The ID of the user receiving the message
+   * @param {string} message - The message content
+   * @param {string} chatId - The ID of the chat
+   */
+  static async sendMessageNotification(senderId, receiverId, message, chatId) {
     try {
+      // Get sender information
       const db = getFirebaseDb();
-      
-      // Get sender info
       const senderDoc = await getDoc(doc(db, 'users', senderId));
-      const senderData = senderDoc.exists() ? senderDoc.data() : {};
-      const senderName = senderData.username || senderData.displayName || 'Someone';
+      
+      if (!senderDoc.exists()) {
+        console.error('Sender not found');
+        return;
+      }
+      
+      const senderData = senderDoc.data();
+      const senderName = senderData.displayName || senderData.username || 'Someone';
       
       // Create notification
-      await addDoc(collection(db, 'users', recipientId, 'notifications'), {
-        title: `New message from ${senderName}`,
-        body: message.length > 50 ? message.substring(0, 50) + '...' : message,
-        data: {
-          type: 'message',
-          chatId: chatId,
-          senderId: senderId,
-        },
-        read: false,
-        createdAt: Timestamp.now(),
-        senderId: senderId,
-      });
+      const title = `${senderName} sent you a message`;
+      let body = message;
       
-      console.log(`Message notification sent to ${recipientId}`);
+      // Truncate message if too long
+      if (body.length > 100) {
+        body = body.substring(0, 97) + '...';
+      }
+      
+      // Add data for deep linking
+      const data = {
+        type: 'message',
+        senderId,
+        chatId,
+        timestamp: new Date().toISOString()
+      };
+      
+      await NotificationService.scheduleLocalNotification(title, body, data);
     } catch (error) {
       console.error('Error sending message notification:', error);
     }
   }
   
-  // Send a friend request notification
-  static async sendFriendRequestNotification(senderId, recipientId) {
+  /**
+   * Send a friend request notification
+   * @param {string} senderId - The ID of the user sending the request
+   * @param {string} receiverId - The ID of the user receiving the request
+   */
+  static async sendFriendRequestNotification(senderId, receiverId) {
     try {
+      // Get sender information
       const db = getFirebaseDb();
-      
-      // Get sender info
       const senderDoc = await getDoc(doc(db, 'users', senderId));
-      const senderData = senderDoc.exists() ? senderDoc.data() : {};
-      const senderName = senderData.username || senderData.displayName || 'Someone';
+      
+      if (!senderDoc.exists()) {
+        console.error('Sender not found');
+        return;
+      }
+      
+      const senderData = senderDoc.data();
+      const senderName = senderData.displayName || senderData.username || 'Someone';
       
       // Create notification
-      await addDoc(collection(db, 'users', recipientId, 'notifications'), {
-        title: 'New Friend Request',
-        body: `${senderName} wants to add you as a friend`,
-        data: {
-          type: 'friendRequest',
-          senderId: senderId,
-        },
-        read: false,
-        createdAt: Timestamp.now(),
-        senderId: senderId,
-      });
+      const title = 'New Friend Request';
+      const body = `${senderName} wants to add you as a friend`;
       
-      console.log(`Friend request notification sent to ${recipientId}`);
+      // Add data for deep linking
+      const data = {
+        type: 'friendRequest',
+        senderId,
+        timestamp: new Date().toISOString()
+      };
+      
+      await NotificationService.scheduleLocalNotification(title, body, data);
     } catch (error) {
       console.error('Error sending friend request notification:', error);
     }
   }
   
-  // Send a story notification
-  static async sendStoryNotification(senderId, recipientIds, storyId) {
+  /**
+   * Send a story notification
+   * @param {string} senderId - The ID of the user who posted the story
+   * @param {string} storyId - The ID of the story
+   * @param {Array<string>} receiverIds - Array of user IDs to notify
+   */
+  static async sendStoryNotification(senderId, storyId, receiverIds = []) {
     try {
+      // Get sender information
       const db = getFirebaseDb();
-      
-      // Get sender info
       const senderDoc = await getDoc(doc(db, 'users', senderId));
-      const senderData = senderDoc.exists() ? senderDoc.data() : {};
-      const senderName = senderData.username || senderData.displayName || 'Someone';
       
-      // Create a batch to add all notifications
-      const batch = db.batch();
-      
-      // Create notifications for each recipient
-      for (const recipientId of recipientIds) {
-        if (recipientId !== senderId) { // Don't send notification to self
-          const notificationRef = doc(collection(db, 'users', recipientId, 'notifications'));
-          batch.set(notificationRef, {
-            title: 'New Story',
-            body: `${senderName} added a new story`,
-            data: {
-              type: 'story',
-              storyId: storyId,
-              senderId: senderId,
-            },
-            read: false,
-            createdAt: Timestamp.now(),
-            senderId: senderId,
-          });
-        }
+      if (!senderDoc.exists()) {
+        console.error('Sender not found');
+        return;
       }
       
-      // Commit the batch
-      await batch.commit();
+      const senderData = senderDoc.data();
+      const senderName = senderData.displayName || senderData.username || 'Someone';
       
-      console.log(`Story notifications sent to ${recipientIds.length} recipients`);
+      // Create notification
+      const title = 'New Story';
+      const body = `${senderName} added a new story`;
+      
+      // Add data for deep linking
+      const data = {
+        type: 'story',
+        senderId,
+        storyId,
+        timestamp: new Date().toISOString()
+      };
+      
+      await NotificationService.scheduleLocalNotification(title, body, data);
     } catch (error) {
-      console.error('Error sending story notifications:', error);
+      console.error('Error sending story notification:', error);
     }
   }
   
-  // Send a friend accepted notification
-  static async sendFriendAcceptedNotification(senderId, recipientId) {
+  /**
+   * Send a generic test notification
+   * @param {string} title - The notification title
+   * @param {string} body - The notification body
+   * @returns {Promise<string>} The notification ID
+   */
+  static async sendTestNotification(title = 'Test Notification', body = 'This is a test notification') {
     try {
-      const db = getFirebaseDb();
+      const data = {
+        type: 'test',
+        timestamp: new Date().toISOString()
+      };
       
-      // Get sender info
-      const senderDoc = await getDoc(doc(db, 'users', senderId));
-      const senderData = senderDoc.exists() ? senderDoc.data() : {};
-      const senderName = senderData.username || senderData.displayName || 'Someone';
-      
-      // Create notification
-      await addDoc(collection(db, 'users', recipientId, 'notifications'), {
-        title: 'Friend Request Accepted',
-        body: `${senderName} accepted your friend request`,
-        data: {
-          type: 'friendAccepted',
-          senderId: senderId,
-        },
-        read: false,
-        createdAt: Timestamp.now(),
-        senderId: senderId,
-      });
-      
-      console.log(`Friend accepted notification sent to ${recipientId}`);
+      const notificationId = await NotificationService.scheduleLocalNotification(title, body, data);
+      return notificationId;
     } catch (error) {
-      console.error('Error sending friend accepted notification:', error);
+      console.error('Error sending test notification:', error);
+      return null;
     }
   }
-}
-
-export default NotificationHelper; 
+} 

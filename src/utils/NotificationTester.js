@@ -1,66 +1,90 @@
-import * as Notifications from 'expo-notifications';
+/**
+ * NotificationTester.js
+ * 
+ * A utility class for testing notifications in the app.
+ * This is primarily used by the TestNotificationsScreen.
+ */
 
-class NotificationTester {
+import * as Notifications from 'expo-notifications';
+import NotificationService from '../services/NotificationService';
+import NotificationHelper from './NotificationHelper';
+
+export default class NotificationTester {
   /**
-   * Send a test local notification
-   * @param {string} title - The notification title
-   * @param {string} body - The notification body
-   * @param {Object} data - Additional data to include with the notification
-   * @returns {Promise<string>} - The notification identifier
+   * Send a generic test notification
+   * @returns {Promise<string>} The notification ID
    */
-  static async sendTestNotification(title = 'Test Notification', body = 'This is a test notification', data = {}) {
+  static async sendTestNotification() {
+    return NotificationHelper.sendTestNotification(
+      'Test Notification',
+      'This is a test notification from SnapClone'
+    );
+  }
+
+  /**
+   * Send a test message notification
+   * @returns {Promise<string>} The notification ID
+   */
+  static async sendTestMessageNotification() {
+    const mockSenderId = 'test-user-id';
+    const mockReceiverId = 'current-user-id';
+    const mockMessage = 'Hey! This is a test message notification.';
+    const mockChatId = 'test-chat-id';
+
     try {
-      const notificationId = await Notifications.scheduleNotificationAsync({
-        content: {
-          title,
-          body,
-          data: { ...data, test: true },
-        },
-        trigger: null, // Show immediately
-      });
-      
-      console.log(`Test notification sent with ID: ${notificationId}`);
-      return notificationId;
+      await NotificationHelper.sendMessageNotification(
+        mockSenderId,
+        mockReceiverId,
+        mockMessage,
+        mockChatId
+      );
+      return 'test-message-notification';
     } catch (error) {
-      console.error('Error sending test notification:', error);
+      console.error('Error sending test message notification:', error);
       throw error;
     }
   }
 
   /**
-   * Send a test message notification
-   * @returns {Promise<string>} - The notification identifier
-   */
-  static async sendTestMessageNotification() {
-    return this.sendTestNotification(
-      'New Message',
-      'John Doe: Hey, how are you?',
-      { type: 'message', chatId: 'test-chat-id', senderId: 'test-sender-id' }
-    );
-  }
-
-  /**
    * Send a test friend request notification
-   * @returns {Promise<string>} - The notification identifier
+   * @returns {Promise<string>} The notification ID
    */
   static async sendTestFriendRequestNotification() {
-    return this.sendTestNotification(
-      'New Friend Request',
-      'Jane Smith wants to add you as a friend',
-      { type: 'friendRequest', senderId: 'test-sender-id' }
-    );
+    const mockSenderId = 'test-user-id';
+    const mockReceiverId = 'current-user-id';
+
+    try {
+      await NotificationHelper.sendFriendRequestNotification(
+        mockSenderId,
+        mockReceiverId
+      );
+      return 'test-friend-request-notification';
+    } catch (error) {
+      console.error('Error sending test friend request notification:', error);
+      throw error;
+    }
   }
 
   /**
    * Send a test story notification
-   * @returns {Promise<string>} - The notification identifier
+   * @returns {Promise<string>} The notification ID
    */
   static async sendTestStoryNotification() {
-    return this.sendTestNotification(
-      'New Story',
-      'Mike Johnson added a new story',
-      { type: 'story', storyId: 'test-story-id', senderId: 'test-sender-id' }
-    );
+    const mockSenderId = 'test-user-id';
+    const mockStoryId = 'test-story-id';
+    const mockReceiverIds = ['current-user-id'];
+
+    try {
+      await NotificationHelper.sendStoryNotification(
+        mockSenderId,
+        mockStoryId,
+        mockReceiverIds
+      );
+      return 'test-story-notification';
+    } catch (error) {
+      console.error('Error sending test story notification:', error);
+      throw error;
+    }
   }
 
   /**
@@ -70,9 +94,9 @@ class NotificationTester {
   static async cancelNotification(notificationId) {
     try {
       await Notifications.cancelScheduledNotificationAsync(notificationId);
-      console.log(`Notification with ID ${notificationId} canceled`);
     } catch (error) {
       console.error('Error canceling notification:', error);
+      throw error;
     }
   }
 
@@ -81,40 +105,49 @@ class NotificationTester {
    */
   static async cancelAllNotifications() {
     try {
-      await Notifications.cancelAllScheduledNotificationsAsync();
-      console.log('All notifications canceled');
+      await NotificationService.cancelAllNotifications();
     } catch (error) {
       console.error('Error canceling all notifications:', error);
+      throw error;
     }
   }
 
   /**
-   * Get all pending notification requests
-   * @returns {Promise<Array>} - Array of notification requests
+   * Get all pending notifications
+   * @returns {Promise<Array>} Array of pending notifications
    */
   static async getPendingNotifications() {
     try {
-      const notifications = await Notifications.getAllScheduledNotificationsAsync();
-      console.log(`Found ${notifications.length} pending notifications`);
-      return notifications;
+      return await Notifications.getAllScheduledNotificationsAsync();
     } catch (error) {
       console.error('Error getting pending notifications:', error);
-      return [];
+      throw error;
     }
   }
 
   /**
-   * Set the app badge count
+   * Set the badge count
    * @param {number} count - The badge count to set
    */
   static async setBadgeCount(count) {
     try {
-      await Notifications.setBadgeCountAsync(count);
-      console.log(`Badge count set to ${count}`);
+      await NotificationService.setBadgeCount(count);
     } catch (error) {
       console.error('Error setting badge count:', error);
+      throw error;
     }
   }
-}
 
-export default NotificationTester; 
+  /**
+   * Get the current badge count
+   * @returns {Promise<number>} The current badge count
+   */
+  static async getBadgeCount() {
+    try {
+      return await NotificationService.getBadgeCount();
+    } catch (error) {
+      console.error('Error getting badge count:', error);
+      throw error;
+    }
+  }
+} 
