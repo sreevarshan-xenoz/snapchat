@@ -16,7 +16,12 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.yourusername.snapclone"
+      "bundleIdentifier": "com.yourusername.snapclone",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -27,8 +32,11 @@
       "permissions": [
         "CAMERA",
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
-      ]
+        "ACCESS_COARSE_LOCATION",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
+      ],
+      "useNextNotificationsApi": true
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -45,7 +53,26 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Allow SnapClone to use your location to show your friends on the map."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#ffffff",
+          "sounds": [
+            "./assets/notification-sound.wav"
+          ],
+          "androidMode": "default",
+          "androidCollapsedTitle": "SnapClone",
+          "iosDisplayInForeground": true
+        }
       ]
-    ]
+    ],
+    "notification": {
+      "icon": "./assets/notification-icon.png",
+      "color": "#FFFC00",
+      "androidMode": "default",
+      "androidCollapsedTitle": "SnapClone"
+    }
   }
 } 

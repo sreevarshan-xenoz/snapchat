@@ -29,6 +29,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { getFirebaseStorage } from '../../config/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import NotificationHelper from '../../utils/NotificationHelper';
 
 const ChatDetailScreen = ({ route, navigation }) => {
   const { chatId, recipientId, recipientName, recipientPhoto } = route.params;
@@ -98,7 +99,9 @@ const ChatDetailScreen = ({ route, navigation }) => {
 
     try {
       setSending(true);
-      await addDoc(collection(db, 'chats', chatId, 'messages'), {
+      
+      // Add message to Firestore
+      const messageRef = await addDoc(collection(db, 'chats', chatId, 'messages'), {
         text: text.trim(),
         senderId: user.uid,
         senderName: user.displayName || user.email,
@@ -113,6 +116,14 @@ const ChatDetailScreen = ({ route, navigation }) => {
         lastMessageTimestamp: serverTimestamp(),
         lastMessageSenderId: user.uid,
       });
+      
+      // Send notification to recipient
+      await NotificationHelper.sendMessageNotification(
+        user.uid, 
+        recipientId, 
+        text.trim(),
+        chatId
+      );
 
       setText('');
       setSending(false);
@@ -156,13 +167,13 @@ const ChatDetailScreen = ({ route, navigation }) => {
       const blob = await response.blob();
       
       const storage = getFirebaseStorage();
-      const imageRef = ref(storage, `chats/${chatId}/${Date.now()}`);
+      const imageRef = ref(storage, `chats/${chatId}/images/${Date.now()}`);
       
       await uploadBytes(imageRef, blob);
       const downloadURL = await getDownloadURL(imageRef);
       
       // Add message to Firestore
-      await addDoc(collection(db, 'chats', chatId, 'messages'), {
+      const messageRef = await addDoc(collection(db, 'chats', chatId, 'messages'), {
         imageUrl: downloadURL,
         senderId: user.uid,
         senderName: user.displayName || user.email,
@@ -170,13 +181,21 @@ const ChatDetailScreen = ({ route, navigation }) => {
         read: false,
         type: 'image',
       });
-
+      
       // Update last message in chat document
       await updateDoc(doc(db, 'chats', chatId), {
-        lastMessage: 'Sent an image',
+        lastMessage: '📷 Image',
         lastMessageTimestamp: serverTimestamp(),
         lastMessageSenderId: user.uid,
       });
+      
+      // Send notification to recipient
+      await NotificationHelper.sendMessageNotification(
+        user.uid, 
+        recipientId, 
+        '📷 Sent you an image',
+        chatId
+      );
       
       setUploading(false);
     } catch (error) {

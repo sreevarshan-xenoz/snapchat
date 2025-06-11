@@ -1,0 +1,11 @@
+/* 
+This is a placeholder for the notification-icon.png file.
+You should replace this with an actual PNG image file for your notification icon.
+The icon should be:
+- 96x96 pixels for Android
+- Transparent background
+- Simple design that works well at small sizes
+- Preferably white icon on transparent background for Android
+
+For iOS, the app icon is used for notifications, so no separate icon is needed.
+*/ 

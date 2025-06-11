@@ -26,6 +26,7 @@ import {
   getDoc,
 } from 'firebase/firestore';
 import { updateFriends } from '../../redux/slices/userSlice';
+import NotificationHelper from '../../utils/NotificationHelper';
 
 const FriendRequestsScreen = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -181,6 +182,9 @@ const FriendRequestsScreen = ({ navigation }) => {
         outgoingRequests: arrayUnion(recipientId),
       });
       
+      // Send notification to recipient
+      await NotificationHelper.sendFriendRequestNotification(user.uid, recipientId);
+      
       // Update local state
       const recipient = searchResults.find(result => result.uid === recipientId);
       if (recipient) {
@@ -213,6 +217,9 @@ const FriendRequestsScreen = ({ navigation }) => {
         friends: arrayUnion(user.uid),
         outgoingRequests: arrayRemove(user.uid),
       });
+      
+      // Send notification to sender
+      await NotificationHelper.sendFriendAcceptedNotification(user.uid, senderId);
       
       // Update local state
       const sender = incomingRequests.find(request => request.uid === senderId);
