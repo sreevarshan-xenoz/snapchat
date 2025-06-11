@@ -7,6 +7,7 @@ import { store } from './src/redux/store';
 import AppNavigator from './src/navigation/AppNavigator';
 import { initializeFirebase } from './src/config/firebase';
 import { LogBox } from 'react-native';
+import { NotificationProvider } from './src/contexts/NotificationContext';
 
 // Ignore specific warnings
 LogBox.ignoreLogs([
@@ -34,8 +35,10 @@ export default function App() {
     <Provider store={store}>
       <SafeAreaProvider>
         <NavigationContainer>
-          <AppNavigator />
-          <StatusBar style="auto" />
+          <NotificationProvider>
+            <AppNavigator />
+            <StatusBar style="auto" />
+          </NotificationProvider>
         </NavigationContainer>
       </SafeAreaProvider>
     </Provider>
