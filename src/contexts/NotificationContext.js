@@ -1,217 +1,136 @@
-import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import * as Notifications from 'expo-notifications';
 import { useSelector } from 'react-redux';
-import { getFirebaseDb } from '../config/firebase';
-import { 
-  collection, 
-  query, 
-  where, 
-  onSnapshot, 
-  doc, 
-  updateDoc, 
-  arrayUnion, 
-  Timestamp, 
-  orderBy, 
-  limit,
-  addDoc 
-} from 'firebase/firestore';
 import NotificationService from '../services/NotificationService';
 
-export const NotificationContext = createContext();
+const NotificationContext = createContext();
 
 export const useNotification = () => useContext(NotificationContext);
 
 export const NotificationProvider = ({ children }) => {
-  const { user } = useSelector((state) => state.auth);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const notificationReceivedListener = useRef();
-  const notificationResponseListener = useRef();
-
+  const [isRegistered, setIsRegistered] = useState(false);
+  const notificationListener = useRef();
+  const responseListener = useRef();
+  
+  const user = useSelector(state => state.auth.user);
+  
+  // Register for push notifications when user logs in
   useEffect(() => {
-    if (user) {
-      // Register for push notifications
+    if (user && !isRegistered) {
       registerForPushNotifications();
-      
-      // Set up notification listeners
-      setupNotificationListeners();
-      
-      // Fetch notifications from Firestore
-      fetchNotifications();
-
-      // Clean up on unmount
-      return () => {
-        if (notificationReceivedListener.current) {
-          NotificationService.removeNotificationSubscription(notificationReceivedListener.current);
-        }
-        if (notificationResponseListener.current) {
-          NotificationService.removeNotificationSubscription(notificationResponseListener.current);
-        }
-      };
     }
-  }, [user]);
+  }, [user, isRegistered]);
+  
+  // Set up notification listeners
+  useEffect(() => {
+    // This listener is fired whenever a notification is received while the app is foregrounded
+    notificationListener.current = NotificationService.addNotificationReceivedListener(
+      notification => {
+        const notificationData = notification.request.content;
+        addNotification({
+          id: notification.request.identifier,
+          title: notificationData.title,
+          body: notificationData.body,
+          data: notificationData.data,
+          read: false,
+          createdAt: new Date(),
+        });
+      }
+    );
 
+    // This listener is fired whenever a user taps on or interacts with a notification
+    responseListener.current = NotificationService.addNotificationResponseReceivedListener(
+      response => {
+        const notificationData = response.notification.request.content;
+        markNotificationAsRead(response.notification.request.identifier);
+        handleNotificationResponse(notificationData.data);
+      }
+    );
+
+    // Clean up listeners on unmount
+    return () => {
+      if (notificationListener.current) {
+        NotificationService.removeNotificationSubscription(notificationListener.current);
+      }
+      if (responseListener.current) {
+        NotificationService.removeNotificationSubscription(responseListener.current);
+      }
+    };
+  }, []);
+
+  // Register for push notifications
   const registerForPushNotifications = async () => {
-    if (user) {
-      await NotificationService.registerForPushNotifications(user.uid);
+    try {
+      if (user && user.uid) {
+        const token = await NotificationService.registerForPushNotifications(user.uid);
+        if (token) {
+          setIsRegistered(true);
+          console.log('Push notification registration successful');
+        }
+      }
+    } catch (error) {
+      console.error('Error registering for push notifications:', error);
     }
   };
 
-  const setupNotificationListeners = () => {
-    // When a notification is received while the app is in the foreground
-    notificationReceivedListener.current = NotificationService.addNotificationReceivedListener(
-      handleNotificationReceived
-    );
-
-    // When a user taps on a notification (app was in the background)
-    notificationResponseListener.current = NotificationService.addNotificationResponseReceivedListener(
-      handleNotificationResponse
-    );
-  };
-
-  const handleNotificationReceived = (notification) => {
-    const { data } = notification.request.content;
-    console.log('Notification received in foreground:', data);
+  // Add a notification to the list
+  const addNotification = (notification) => {
+    setNotifications(prev => [notification, ...prev]);
+    setUnreadCount(prev => prev + 1);
     
     // Update badge count
-    updateBadgeCount();
+    NotificationService.setBadgeCount(unreadCount + 1);
   };
 
-  const handleNotificationResponse = (response) => {
-    const { data } = response.notification.request.content;
-    console.log('Notification response:', data);
+  // Mark a notification as read
+  const markNotificationAsRead = (notificationId) => {
+    setNotifications(prev => 
+      prev.map(notification => 
+        notification.id === notificationId 
+          ? { ...notification, read: true } 
+          : notification
+      )
+    );
     
-    // Handle navigation based on notification type
-    if (data.type === 'message') {
-      // Navigate to chat detail
-      // This will be handled by the component that uses this context
-    } else if (data.type === 'friendRequest') {
-      // Navigate to friend requests
-    } else if (data.type === 'story') {
-      // Navigate to story view
-    }
+    // Update unread count
+    const updatedUnreadCount = Math.max(0, unreadCount - 1);
+    setUnreadCount(updatedUnreadCount);
+    
+    // Update badge count
+    NotificationService.setBadgeCount(updatedUnreadCount);
   };
 
-  const fetchNotifications = () => {
-    if (!user) return;
-
-    try {
-      const db = getFirebaseDb();
-      const notificationsRef = collection(db, 'users', user.uid, 'notifications');
-      const notificationsQuery = query(
-        notificationsRef,
-        orderBy('createdAt', 'desc'),
-        limit(50)
-      );
-
-      const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
-        const notificationsList = [];
-        let unread = 0;
-
-        snapshot.forEach((doc) => {
-          const notification = {
-            id: doc.id,
-            ...doc.data(),
-          };
-          
-          notificationsList.push(notification);
-          
-          if (!notification.read) {
-            unread++;
-          }
-        });
-
-        setNotifications(notificationsList);
-        setUnreadCount(unread);
-        
-        // Update badge count
-        NotificationService.setBadgeCount(unread);
-      });
-
-      return unsubscribe;
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-    }
+  // Mark all notifications as read
+  const markAllNotificationsAsRead = () => {
+    setNotifications(prev => 
+      prev.map(notification => ({ ...notification, read: true }))
+    );
+    
+    // Reset unread count and badge
+    setUnreadCount(0);
+    NotificationService.setBadgeCount(0);
   };
 
-  const updateBadgeCount = async () => {
-    try {
-      const count = await NotificationService.getBadgeCount();
-      NotificationService.setBadgeCount(count + 1);
-    } catch (error) {
-      console.error('Error updating badge count:', error);
-    }
-  };
-
-  const markNotificationAsRead = async (notificationId) => {
-    if (!user || !notificationId) return;
-
-    try {
-      const db = getFirebaseDb();
-      await updateDoc(doc(db, 'users', user.uid, 'notifications', notificationId), {
-        read: true,
-        readAt: Timestamp.now(),
-      });
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-    }
-  };
-
-  const markAllNotificationsAsRead = async () => {
-    if (!user) return;
-
-    try {
-      const db = getFirebaseDb();
-      const batch = db.batch();
-      
-      notifications.forEach((notification) => {
-        if (!notification.read) {
-          const notificationRef = doc(db, 'users', user.uid, 'notifications', notification.id);
-          batch.update(notificationRef, {
-            read: true,
-            readAt: Timestamp.now(),
-          });
-        }
-      });
-      
-      await batch.commit();
-      
-      // Reset badge count
-      NotificationService.setBadgeCount(0);
-    } catch (error) {
-      console.error('Error marking all notifications as read:', error);
-    }
-  };
-
-  const sendNotification = async (recipientId, title, body, data = {}) => {
-    if (!recipientId) return;
-
-    try {
-      const db = getFirebaseDb();
-      
-      // Add notification to recipient's notifications collection
-      await addDoc(collection(db, 'users', recipientId, 'notifications'), {
-        title,
-        body,
-        data,
-        read: false,
-        createdAt: Timestamp.now(),
-        senderId: user ? user.uid : null,
-      });
-      
-      // In a real app, you would call a server endpoint to send a push notification
-      // For this example, we'll just log that we would send a push notification
-      console.log(`Push notification would be sent to ${recipientId}`);
-    } catch (error) {
-      console.error('Error sending notification:', error);
-    }
+  // Handle notification response based on type
+  const handleNotificationResponse = (data) => {
+    // This function will be expanded to navigate to the appropriate screen
+    // based on the notification type (message, friend request, story, etc.)
+    console.log('Handling notification response:', data);
+    
+    // Example navigation logic would go here
+    // if (data.type === 'message' && navigation) {
+    //   navigation.navigate('Chat', { chatId: data.chatId });
+    // }
   };
 
   const value = {
     notifications,
     unreadCount,
+    addNotification,
     markNotificationAsRead,
     markAllNotificationsAsRead,
-    sendNotification,
   };
 
   return (
@@ -219,4 +138,6 @@ export const NotificationProvider = ({ children }) => {
       {children}
     </NotificationContext.Provider>
   );
-}; 
+};
+
+export default NotificationContext; 

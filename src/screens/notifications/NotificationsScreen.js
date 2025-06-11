@@ -1,120 +1,84 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
+  FlatList,
   ActivityIndicator,
   Image,
-  RefreshControl
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { useNotification } from '../../contexts/NotificationContext';
-import { formatDistanceToNow } from 'date-fns';
 
 const NotificationsScreen = () => {
   const navigation = useNavigation();
   const { notifications, unreadCount, markNotificationAsRead, markAllNotificationsAsRead } = useNotification();
-  const [refreshing, setRefreshing] = useState(false);
-
-  useEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity 
-          style={styles.headerButton}
-          onPress={handleMarkAllAsRead}
-          disabled={unreadCount === 0}
-        >
-          <Text style={[styles.headerButtonText, unreadCount === 0 && styles.disabledText]}>
-            Mark all read
-          </Text>
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, unreadCount]);
-
-  const handleMarkAllAsRead = () => {
-    if (unreadCount > 0) {
-      markAllNotificationsAsRead();
-    }
-  };
 
   const handleNotificationPress = (notification) => {
     // Mark as read
     if (!notification.read) {
       markNotificationAsRead(notification.id);
     }
-
+    
     // Navigate based on notification type
-    if (notification.data) {
-      const { type } = notification.data;
-      
-      if (type === 'message' && notification.data.chatId) {
-        navigation.navigate('ChatDetail', { 
-          chatId: notification.data.chatId,
-          userId: notification.data.senderId
-        });
-      } else if (type === 'friendRequest') {
-        navigation.navigate('FriendRequests');
-      } else if (type === 'story' && notification.data.storyId) {
-        navigation.navigate('StoryView', { storyId: notification.data.storyId });
-      }
+    const { data } = notification;
+    if (data.type === 'message' && data.chatId) {
+      navigation.navigate('ChatDetail', { chatId: data.chatId });
+    } else if (data.type === 'friendRequest' && data.senderId) {
+      navigation.navigate('FriendRequests');
+    } else if (data.type === 'story' && data.storyId) {
+      navigation.navigate('StoryView', { storyId: data.storyId });
     }
   };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    // The context already handles real-time updates, but we'll add a small delay
-    // to give the user feedback that a refresh is happening
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
-  };
-
   const renderNotificationItem = ({ item }) => {
-    const timestamp = item.createdAt ? item.createdAt.toDate() : new Date();
-    const timeAgo = formatDistanceToNow(timestamp, { addSuffix: true });
+    const notificationDate = new Date(item.createdAt);
+    const now = new Date();
     
-    let icon = 'notifications-outline';
-    let iconColor = '#999';
+    // Format the date
+    let timeString;
+    const diffMs = now - notificationDate;
+    const diffMins = Math.floor(diffMs / (1000 * 60));
     
-    if (item.data) {
-      switch (item.data.type) {
-        case 'message':
-          icon = 'chatbubble';
-          iconColor = '#0088ff';
-          break;
-        case 'friendRequest':
-          icon = 'person-add';
-          iconColor = '#00cc99';
-          break;
-        case 'story':
-          icon = 'camera';
-          iconColor = '#ffcc00';
-          break;
-        default:
-          break;
-      }
+    if (diffMins < 1) {
+      timeString = 'Just now';
+    } else if (diffMins < 60) {
+      timeString = `${diffMins}m ago`;
+    } else if (diffMins < 1440) {
+      const hours = Math.floor(diffMins / 60);
+      timeString = `${hours}h ago`;
+    } else {
+      const days = Math.floor(diffMins / 1440);
+      timeString = `${days}d ago`;
+    }
+    
+    // Choose icon based on notification type
+    let iconName = 'notifications-outline';
+    if (item.data.type === 'message') {
+      iconName = 'chatbubble-outline';
+    } else if (item.data.type === 'friendRequest') {
+      iconName = 'person-add-outline';
+    } else if (item.data.type === 'story') {
+      iconName = 'camera-outline';
     }
     
     return (
       <TouchableOpacity
-        style={[styles.notificationItem, !item.read && styles.unreadItem]}
+        style={[
+          styles.notificationItem,
+          !item.read && styles.unreadNotification
+        ]}
         onPress={() => handleNotificationPress(item)}
       >
         <View style={styles.iconContainer}>
-          <Ionicons name={icon} size={24} color={iconColor} />
+          <Ionicons name={iconName} size={24} color="#000" />
         </View>
-        <View style={styles.contentContainer}>
-          <Text style={styles.notificationTitle} numberOfLines={1}>
-            {item.title}
-          </Text>
-          <Text style={styles.notificationBody} numberOfLines={2}>
-            {item.body}
-          </Text>
-          <Text style={styles.timeText}>{timeAgo}</Text>
+        <View style={styles.notificationContent}>
+          <Text style={styles.notificationTitle}>{item.title}</Text>
+          <Text style={styles.notificationBody}>{item.body}</Text>
+          <Text style={styles.notificationTime}>{timeString}</Text>
         </View>
         {!item.read && <View style={styles.unreadDot} />}
       </TouchableOpacity>
@@ -123,9 +87,9 @@ const NotificationsScreen = () => {
 
   const renderEmptyComponent = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="notifications-off-outline" size={64} color="#ccc" />
+      <Ionicons name="notifications-off-outline" size={64} color="#CCCCCC" />
       <Text style={styles.emptyText}>No notifications yet</Text>
-      <Text style={styles.emptySubText}>
+      <Text style={styles.emptySubtext}>
         When you receive notifications, they'll appear here
       </Text>
     </View>
@@ -133,20 +97,31 @@ const NotificationsScreen = () => {
 
   return (
     <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={24} color="#FFFC00" />
+        </TouchableOpacity>
+        <Text style={styles.title}>Notifications</Text>
+        {unreadCount > 0 && (
+          <TouchableOpacity
+            style={styles.markAllReadButton}
+            onPress={markAllNotificationsAsRead}
+          >
+            <Text style={styles.markAllReadText}>Mark all read</Text>
+          </TouchableOpacity>
+        )}
+        {unreadCount === 0 && <View style={{ width: 80 }} />}
+      </View>
+
       <FlatList
         data={notifications}
         renderItem={renderNotificationItem}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={notifications.length === 0 ? styles.listContentEmpty : styles.listContent}
+        contentContainerStyle={styles.listContent}
         ListEmptyComponent={renderEmptyComponent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={['#ffcc00']}
-            tintColor="#ffcc00"
-          />
-        }
       />
     </View>
   );
@@ -157,22 +132,33 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  headerButton: {
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 15,
+    paddingTop: 50,
+    paddingBottom: 10,
+    backgroundColor: '#000',
   },
-  headerButtonText: {
-    color: '#0088ff',
-    fontSize: 16,
+  backButton: {
+    padding: 5,
   },
-  disabledText: {
-    color: '#ccc',
+  title: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  markAllReadButton: {
+    padding: 5,
+  },
+  markAllReadText: {
+    color: '#FFFC00',
+    fontWeight: '500',
   },
   listContent: {
-    paddingBottom: 20,
-  },
-  listContentEmpty: {
     flexGrow: 1,
-    justifyContent: 'center',
+    paddingVertical: 10,
   },
   notificationItem: {
     flexDirection: 'row',
@@ -181,32 +167,32 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f0f0f0',
     backgroundColor: '#fff',
   },
-  unreadItem: {
-    backgroundColor: '#f9fcff',
+  unreadNotification: {
+    backgroundColor: '#FFFEF0',
   },
   iconContainer: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
   },
-  contentContainer: {
+  notificationContent: {
     flex: 1,
   },
   notificationTitle: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: 5,
   },
   notificationBody: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 4,
+    marginBottom: 5,
   },
-  timeText: {
+  notificationTime: {
     fontSize: 12,
     color: '#999',
   },
@@ -214,26 +200,27 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#0088ff',
+    backgroundColor: '#FFFC00',
     alignSelf: 'center',
     marginLeft: 10,
   },
   emptyContainer: {
-    alignItems: 'center',
+    flex: 1,
     justifyContent: 'center',
-    padding: 20,
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    paddingTop: 100,
   },
   emptyText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#666',
-    marginTop: 15,
+    fontWeight: 'bold',
+    marginTop: 20,
+    marginBottom: 10,
   },
-  emptySubText: {
+  emptySubtext: {
     fontSize: 14,
-    color: '#999',
+    color: '#666',
     textAlign: 'center',
-    marginTop: 5,
   },
 });
 
