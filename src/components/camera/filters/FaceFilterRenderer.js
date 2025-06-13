@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Animated, Text } from 'react-native';
-import { isFaceFilter, getFaceFilterEmoji } from '../../../utils/FilterUtils';
+import { isFaceFilter, FACE_FILTER_EMOJIS } from './FilterAssets';
 
 const FaceFilterRenderer = ({ faces, filterType, animationValue }) => {
   if (!isFaceFilter(filterType) || faces.length === 0) {
@@ -14,7 +14,7 @@ const FaceFilterRenderer = ({ faces, filterType, animationValue }) => {
     const { width, height } = size;
     
     // Get appropriate emoji for the filter type
-    const emoji = getFaceFilterEmoji(filterType);
+    const emoji = FACE_FILTER_EMOJIS[filterType] || '🐶';
 
     return (
       <Animated.View

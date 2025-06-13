@@ -20,7 +20,7 @@ import * as FaceDetector from 'expo-face-detector';
 import FilterSelector from '../../components/camera/filters/FilterSelector';
 import FaceFilterRenderer from '../../components/camera/filters/FaceFilterRenderer';
 import ImageFilterOverlay from '../../components/camera/filters/ImageFilterOverlay';
-import { isFaceFilter } from '../../utils/FilterUtils';
+import { isFaceFilter } from '../../components/camera/filters/FilterAssets';
 
 const CameraScreen = () => {
   const [hasPermission, setHasPermission] = useState(null);
