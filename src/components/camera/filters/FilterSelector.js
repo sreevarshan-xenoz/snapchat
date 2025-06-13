@@ -5,22 +5,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Image,
 } from 'react-native';
-
-// Filter thumbnails (these will be replaced with actual filter previews)
-const FILTERS = [
-  { id: 'none', name: 'None', icon: '🔍' },
-  { id: 'sepia', name: 'Sepia', icon: '🌅' },
-  { id: 'grayscale', name: 'B&W', icon: '⚫' },
-  { id: 'vintage', name: 'Vintage', icon: '📷' },
-  { id: 'blur', name: 'Blur', icon: '🌫️' },
-  { id: 'saturate', name: 'Vibrant', icon: '🌈' },
-  { id: 'invert', name: 'Invert', icon: '🔄' },
-  { id: 'dog', name: 'Dog', icon: '🐶' },
-  { id: 'cat', name: 'Cat', icon: '🐱' },
-  { id: 'bunny', name: 'Bunny', icon: '🐰' },
-];
+import { FILTER_THUMBNAILS } from './FilterAssets';
 
 const FilterSelector = ({ selectedFilter, onSelectFilter }) => {
   return (
@@ -30,7 +16,7 @@ const FilterSelector = ({ selectedFilter, onSelectFilter }) => {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {FILTERS.map((filter) => (
+        {FILTER_THUMBNAILS.map((filter) => (
           <TouchableOpacity
             key={filter.id}
             style={[

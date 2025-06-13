@@ -16,6 +16,11 @@ import { getFirebaseStorage } from '../../config/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getFirebaseDb } from '../../config/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import * as FaceDetector from 'expo-face-detector';
+import FilterSelector from '../../components/camera/filters/FilterSelector';
+import FaceFilterRenderer from '../../components/camera/filters/FaceFilterRenderer';
+import ImageFilterOverlay from '../../components/camera/filters/ImageFilterOverlay';
+import { isFaceFilter } from '../../utils/FilterUtils';
 
 const CameraScreen = () => {
   const [hasPermission, setHasPermission] = useState(null);
@@ -24,6 +29,8 @@ const CameraScreen = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState('none');
+  const [faces, setFaces] = useState([]);
   const cameraRef = useRef(null);
   const navigation = useNavigation();
   const { user } = useSelector((state) => state.auth);
@@ -105,13 +112,18 @@ const CameraScreen = () => {
         username: user.displayName,
         mediaURL: downloadURL,
         mediaType,
+        filter: selectedFilter,
         createdAt: serverTimestamp(),
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
         viewers: [],
       });
 
       // Navigate to story creation screen
-      navigation.navigate('CreateStory', { mediaURL: downloadURL, mediaType });
+      navigation.navigate('CreateStory', { 
+        mediaURL: downloadURL, 
+        mediaType,
+        filter: selectedFilter 
+      });
     } catch (error) {
       console.error('Error uploading media:', error);
       Alert.alert('Error', 'Failed to upload media');
@@ -136,6 +148,12 @@ const CameraScreen = () => {
     );
   };
 
+  const handleFacesDetected = ({ faces }) => {
+    if (isFaceFilter(selectedFilter)) {
+      setFaces(faces);
+    }
+  };
+
   if (hasPermission === null) {
     return <View style={styles.container} />;
   }
@@ -151,6 +169,7 @@ const CameraScreen = () => {
     return (
       <View style={styles.container}>
         <Image source={{ uri: capturedImage.uri }} style={styles.preview} />
+        <ImageFilterOverlay filterType={selectedFilter} />
         <View style={styles.buttonContainer}>
           <TouchableOpacity style={styles.button} onPress={handleRetake}>
             <Ionicons name="refresh" size={30} color="#fff" />
@@ -182,6 +201,14 @@ const CameraScreen = () => {
         type={type}
         flashMode={flash}
         ref={cameraRef}
+        onFacesDetected={isFaceFilter(selectedFilter) ? handleFacesDetected : undefined}
+        faceDetectorSettings={{
+          mode: FaceDetector.FaceDetectorMode.fast,
+          detectLandmarks: FaceDetector.FaceDetectorLandmarks.none,
+          runClassifications: FaceDetector.FaceDetectorClassifications.none,
+          minDetectionInterval: 100,
+          tracking: true,
+        }}
       >
         <View style={styles.overlay}>
           <View style={styles.topControls}>
@@ -196,6 +223,15 @@ const CameraScreen = () => {
               />
             </TouchableOpacity>
           </View>
+          
+          <ImageFilterOverlay filterType={selectedFilter} />
+          <FaceFilterRenderer faces={faces} filterType={selectedFilter} />
+          
+          <FilterSelector 
+            selectedFilter={selectedFilter} 
+            onSelectFilter={setSelectedFilter} 
+          />
+          
           <View style={styles.bottomControls}>
             <TouchableOpacity
               style={[styles.captureButton, isRecording && styles.recordingButton]}
@@ -249,47 +285,51 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    justifyContent: 'center',
+    borderWidth: 5,
+    borderColor: '#fff',
     alignItems: 'center',
-  },
-  recordingButton: {
-    backgroundColor: 'rgba(255, 0, 0, 0.3)',
+    justifyContent: 'center',
   },
   captureButtonInner: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#fff',
   },
+  recordingButton: {
+    borderColor: '#ff0000',
+  },
   recordingIndicator: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: 'red',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#ff0000',
   },
   preview: {
     flex: 1,
-    resizeMode: 'cover',
+    width: '100%',
+    height: '100%',
   },
   buttonContainer: {
+    position: 'absolute',
+    bottom: 30,
     flexDirection: 'row',
     justifyContent: 'space-around',
-    padding: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    width: '100%',
   },
   button: {
-    flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: 15,
+    borderRadius: 10,
+    width: 120,
   },
   disabledButton: {
     opacity: 0.5,
   },
   buttonText: {
     color: '#fff',
-    fontSize: 16,
-    marginLeft: 10,
+    marginTop: 5,
   },
   text: {
     color: '#fff',
