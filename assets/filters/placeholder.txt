@@ -1,0 +1,11 @@
+This directory contains filter assets for the camera filters.
+
+In a production app, this would include:
+- dog_ears.png
+- dog_nose.png
+- cat_ears.png
+- cat_nose.png
+- bunny_ears.png
+- bunny_nose.png
+
+For this demo, we're using emoji-based filters instead of image assets. 
