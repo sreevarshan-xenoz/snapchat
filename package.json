@@ -18,6 +18,8 @@
     "date-fns": "^4.1.0",
     "expo": "~48.0.18",
     "expo-camera": "~13.2.1",
+    "expo-face-detector": "~12.1.1",
+    "expo-gl": "~12.4.0",
     "expo-image-picker": "~14.1.1",
     "expo-location": "~15.1.1",
     "expo-notifications": "^0.31.3",
