@@ -7,7 +7,8 @@
 
 import NotificationService from '../services/NotificationService';
 import { getFirebaseDb } from '../config/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { sendPushNotification } from '../services/PushNotificationService';
 
 export default class NotificationHelper {
   /**
@@ -146,6 +147,122 @@ export default class NotificationHelper {
     } catch (error) {
       console.error('Error sending test notification:', error);
       return null;
+    }
+  }
+
+  /**
+   * Sends a notification for a group chat invite
+   * @param {string} senderId - The ID of the user who created the group
+   * @param {string} recipientId - The ID of the user being invited to the group
+   * @param {string} groupName - The name of the group
+   * @param {string} groupId - The ID of the group chat
+   * @returns {Promise<void>}
+   */
+  static async sendGroupInviteNotification(senderId, recipientId, groupName, groupId) {
+    try {
+      // Get sender info
+      const db = getFirebaseDb();
+      const senderDoc = await getDoc(doc(db, 'users', senderId));
+      const senderData = senderDoc.data();
+      
+      // Create notification data
+      const notificationData = {
+        type: 'group_invite',
+        title: 'Group Chat Invite',
+        body: `${senderData.displayName || senderData.username} added you to "${groupName}"`,
+        data: {
+          groupId,
+          groupName,
+          senderId,
+          senderName: senderData.displayName || senderData.username,
+        },
+        timestamp: serverTimestamp(),
+        read: false,
+      };
+      
+      // Add notification to recipient's notifications collection
+      await addDoc(collection(db, 'users', recipientId, 'notifications'), notificationData);
+      
+      // Send push notification if the user has a device token
+      const recipientDoc = await getDoc(doc(db, 'users', recipientId));
+      const recipientData = recipientDoc.data();
+      
+      if (recipientData.deviceToken) {
+        await sendPushNotification({
+          to: recipientData.deviceToken,
+          title: 'Group Chat Invite',
+          body: `${senderData.displayName || senderData.username} added you to "${groupName}"`,
+          data: {
+            type: 'group_invite',
+            groupId,
+            groupName,
+            senderId,
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Error sending group invite notification:', error);
+    }
+  }
+
+  /**
+   * Sends a notification for a new group message
+   * @param {string} senderId - The ID of the user who sent the message
+   * @param {string} groupId - The ID of the group chat
+   * @param {string} groupName - The name of the group
+   * @param {string} messageText - The text of the message
+   * @param {Array<string>} participantIds - Array of participant IDs to notify
+   * @returns {Promise<void>}
+   */
+  static async sendGroupMessageNotification(senderId, groupId, groupName, messageText, participantIds) {
+    try {
+      // Get sender info
+      const db = getFirebaseDb();
+      const senderDoc = await getDoc(doc(db, 'users', senderId));
+      const senderData = senderDoc.data();
+      
+      // Create notification data
+      const notificationData = {
+        type: 'group_message',
+        title: groupName,
+        body: `${senderData.displayName || senderData.username}: ${messageText.substring(0, 50)}${messageText.length > 50 ? '...' : ''}`,
+        data: {
+          groupId,
+          groupName,
+          senderId,
+          senderName: senderData.displayName || senderData.username,
+        },
+        timestamp: serverTimestamp(),
+        read: false,
+      };
+      
+      // Send notifications to all participants except the sender
+      const recipients = participantIds.filter(id => id !== senderId);
+      
+      for (const recipientId of recipients) {
+        // Add notification to recipient's notifications collection
+        await addDoc(collection(db, 'users', recipientId, 'notifications'), notificationData);
+        
+        // Send push notification if the user has a device token
+        const recipientDoc = await getDoc(doc(db, 'users', recipientId));
+        const recipientData = recipientDoc.data();
+        
+        if (recipientData.deviceToken) {
+          await sendPushNotification({
+            to: recipientData.deviceToken,
+            title: groupName,
+            body: `${senderData.displayName || senderData.username}: ${messageText.substring(0, 50)}${messageText.length > 50 ? '...' : ''}`,
+            data: {
+              type: 'group_message',
+              groupId,
+              groupName,
+              senderId,
+            },
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error sending group message notification:', error);
     }
   }
 } 
