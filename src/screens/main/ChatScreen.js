@@ -22,6 +22,7 @@ import {
   updateDoc,
   arrayUnion,
   serverTimestamp,
+  getDoc,
 } from 'firebase/firestore';
 import {
   fetchChatsStart,
@@ -31,9 +32,9 @@ import {
 } from '../../redux/slices/chatSlice';
 
 const ChatScreen = ({ navigation }) => {
+  const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const { chats } = useSelector((state) => state.chat);
   const { user } = useSelector((state) => state.auth);
   const { friends } = useSelector((state) => state.user);
   const dispatch = useDispatch();
@@ -48,31 +49,48 @@ const ChatScreen = ({ navigation }) => {
         const chatsQuery = query(
           collection(db, 'chats'),
           where('participants', 'array-contains', user.uid),
-          orderBy('lastMessageTime', 'desc')
+          orderBy('lastMessageTimestamp', 'desc')
         );
         
-        // Set up real-time listener
-        const unsubscribe = onSnapshot(
-          chatsQuery,
-          (snapshot) => {
-            const chatsData = snapshot.docs.map((doc) => ({
-              id: doc.id,
-              ...doc.data(),
-            }));
+        const unsubscribe = onSnapshot(chatsQuery, async (snapshot) => {
+          const chatList = [];
+          
+          for (const doc of snapshot.docs) {
+            const chatData = doc.data();
             
-            dispatch(fetchChatsSuccess(chatsData));
-            setLoading(false);
-          },
-          (error) => {
-            console.error('Error fetching chats:', error);
-            dispatch(fetchChatsFailure(error.message));
-            setLoading(false);
+            // For direct chats, get the other participant's info
+            if (chatData.type !== 'group') {
+              const otherParticipantId = chatData.participants.find(id => id !== user.uid);
+              if (otherParticipantId) {
+                const userDoc = await getDoc(doc(db, 'users', otherParticipantId));
+                const userData = userDoc.data();
+                
+                chatList.push({
+                  id: doc.id,
+                  ...chatData,
+                  recipientId: otherParticipantId,
+                  recipientName: userData.displayName || userData.username,
+                  recipientPhoto: userData.photoURL,
+                });
+              }
+            } else {
+              // For group chats, use the group name and a group icon
+              chatList.push({
+                id: doc.id,
+                ...chatData,
+                isGroupChat: true,
+              });
+            }
           }
-        );
+          
+          setChats(chatList);
+          dispatch(fetchChatsSuccess(chatList));
+          setLoading(false);
+        });
         
         return () => unsubscribe();
       } catch (error) {
-        console.error('Error setting up chats listener:', error);
+        console.error('Error fetching chats:', error);
         dispatch(fetchChatsFailure(error.message));
         setLoading(false);
       }
@@ -82,8 +100,20 @@ const ChatScreen = ({ navigation }) => {
   }, [dispatch, db, user.uid]);
 
   const handleChatPress = (chat) => {
-    dispatch(setActiveChat(chat));
-    navigation.navigate('ChatDetail', { chatId: chat.id });
+    if (chat.isGroupChat) {
+      navigation.navigate('ChatDetail', {
+        chatId: chat.id,
+        isGroupChat: true,
+        groupName: chat.name,
+      });
+    } else {
+      navigation.navigate('ChatDetail', {
+        chatId: chat.id,
+        recipientId: chat.recipientId,
+        recipientName: chat.recipientName,
+        recipientPhoto: chat.recipientPhoto,
+      });
+    }
   };
 
   const handleNewChat = () => {
@@ -100,47 +130,53 @@ const ChatScreen = ({ navigation }) => {
   });
 
   const renderChatItem = ({ item }) => {
-    const otherUser = item.participants.find((id) => id !== user.uid);
-    const otherUserData = friends.find((friend) => friend.uid === otherUser);
-    
-    if (!otherUserData) return null;
-    
-    const unreadCount = item.unreadCounts?.[user.uid] || 0;
+    const unreadCount = item.unreadCounts && item.unreadCounts[user.uid] ? item.unreadCounts[user.uid] : 0;
     
     return (
       <TouchableOpacity
         style={styles.chatItem}
         onPress={() => handleChatPress(item)}
       >
-        <View style={styles.avatarContainer}>
-          <Image
-            source={
-              otherUserData.photoURL
-                ? { uri: otherUserData.photoURL }
-                : require('../../../assets/default-avatar.png')
-            }
-            style={styles.avatar}
-          />
-          {unreadCount > 0 && (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadCount}>{unreadCount}</Text>
-            </View>
-          )}
-        </View>
+        <Image
+          source={
+            item.isGroupChat
+              ? require('../../../assets/group-chat-icon.png')
+              : item.recipientPhoto
+              ? { uri: item.recipientPhoto }
+              : require('../../../assets/default-avatar.png')
+          }
+          style={styles.avatar}
+        />
         <View style={styles.chatInfo}>
-          <Text style={styles.username}>{otherUserData.username}</Text>
-          <Text style={styles.lastMessage} numberOfLines={1}>
-            {item.lastMessage || 'No messages yet'}
-          </Text>
+          <View style={styles.chatHeader}>
+            <Text style={styles.chatName}>
+              {item.isGroupChat ? item.name : item.recipientName}
+            </Text>
+            <Text style={styles.chatTime}>
+              {item.lastMessageTimestamp
+                ? new Date(item.lastMessageTimestamp.toDate()).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })
+                : ''}
+            </Text>
+          </View>
+          <View style={styles.chatFooter}>
+            <Text
+              style={[styles.lastMessage, unreadCount > 0 && styles.unreadMessage]}
+              numberOfLines={1}
+            >
+              {item.lastMessageSenderId === user.uid
+                ? `You: ${item.lastMessage}`
+                : item.lastMessage}
+            </Text>
+            {unreadCount > 0 && (
+              <View style={styles.unreadBadge}>
+                <Text style={styles.unreadCount}>{unreadCount}</Text>
+              </View>
+            )}
+          </View>
         </View>
-        <Text style={styles.time}>
-          {item.lastMessageTime
-            ? new Date(item.lastMessageTime.toDate()).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-              })
-            : ''}
-        </Text>
       </TouchableOpacity>
     );
   };
@@ -157,8 +193,11 @@ const ChatScreen = ({ navigation }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Chats</Text>
-        <TouchableOpacity style={styles.newChatButton} onPress={handleNewChat}>
-          <Ionicons name="add-circle" size={24} color="#FFFC00" />
+        <TouchableOpacity
+          style={styles.createGroupButton}
+          onPress={() => navigation.navigate('CreateGroupChat')}
+        >
+          <Ionicons name="people" size={24} color="#000" />
         </TouchableOpacity>
       </View>
 
@@ -218,12 +257,17 @@ const styles = StyleSheet.create({
     borderBottomColor: '#333',
   },
   title: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#fff',
   },
-  newChatButton: {
-    padding: 5,
+  createGroupButton: {
+    backgroundColor: '#FFFC00',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -246,52 +290,61 @@ const styles = StyleSheet.create({
   },
   chatItem: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
+    padding: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#333',
-  },
-  avatarContainer: {
-    position: 'relative',
   },
   avatar: {
     width: 50,
     height: 50,
     borderRadius: 25,
   },
+  chatInfo: {
+    flex: 1,
+    marginLeft: 15,
+  },
+  chatHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  chatName: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  chatTime: {
+    color: '#999',
+    fontSize: 12,
+  },
+  chatFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  lastMessage: {
+    color: '#999',
+    fontSize: 14,
+    flex: 1,
+  },
+  unreadMessage: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
   unreadBadge: {
-    position: 'absolute',
-    top: -5,
-    right: -5,
     backgroundColor: '#FFFC00',
     borderRadius: 10,
     minWidth: 20,
     height: 20,
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 10,
   },
   unreadCount: {
     color: '#000',
     fontSize: 12,
     fontWeight: 'bold',
-  },
-  chatInfo: {
-    flex: 1,
-    marginLeft: 15,
-  },
-  username: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  lastMessage: {
-    color: '#999',
-    fontSize: 14,
-    marginTop: 3,
-  },
-  time: {
-    color: '#666',
-    fontSize: 12,
   },
   emptyContainer: {
     flex: 1,
@@ -304,6 +357,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     marginTop: 10,
     marginBottom: 20,
+  },
+  newChatButton: {
+    backgroundColor: '#FFFC00',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
   },
   newChatButtonText: {
     color: '#000',

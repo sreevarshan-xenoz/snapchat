@@ -20,6 +20,7 @@ import ProfileScreen from '../screens/main/ProfileScreen';
 
 // Chat Screens
 import ChatDetailScreen from '../screens/chat/ChatDetailScreen';
+import CreateGroupChatScreen from '../screens/chat/CreateGroupChatScreen';
 
 // Story Screens
 import StoryViewScreen from '../screens/story/StoryViewScreen';
@@ -49,9 +50,34 @@ const AuthNavigator = () => {
 
 const ChatNavigator = () => {
   return (
-    <Stack.Navigator>
-      <Stack.Screen name="Chats" component={ChatScreen} />
-      <Stack.Screen name="ChatDetail" component={ChatDetailScreen} />
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: '#000',
+        },
+        headerTintColor: '#FFFC00',
+        headerTitleStyle: {
+          fontWeight: 'bold',
+        },
+      }}
+    >
+      <Stack.Screen
+        name="ChatScreen"
+        component={ChatScreen}
+        options={{ title: 'Chats' }}
+      />
+      <Stack.Screen
+        name="ChatDetail"
+        component={ChatDetailScreen}
+        options={({ route }) => ({
+          title: route.params.isGroupChat ? route.params.groupName : route.params.recipientName,
+        })}
+      />
+      <Stack.Screen
+        name="CreateGroupChat"
+        component={CreateGroupChatScreen}
+        options={{ title: 'Create Group Chat' }}
+      />
     </Stack.Navigator>
   );
 };
